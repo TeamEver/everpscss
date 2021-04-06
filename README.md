@@ -6,7 +6,7 @@ This Prestashop module allows you to add CSS and JS rules from the store adminis
 
 In the module configuration, the rules entered are saved in a custom.css and custom.js file, added to the store if it is in Prestashop 1.6
 
-### Add CSS and JS rules on Prestashop 1.6 ###
+### Add CSS and JS rules on Prestashop 1.7 ###
 
 If the store is in Prestashop 1.7, the rules are added in the custom.css and custom.js files of the theme or child theme.
 

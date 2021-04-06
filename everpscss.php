@@ -299,7 +299,7 @@ class Everpscss extends Module
     public function hookBackOfficeHeader()
     {
         if (Tools::getValue('module_name') == $this->name) {
-            $this->context->controller->addCSS($this->_path.'views/css/back.css');
+            $this->context->controller->addCSS($this->_path.'views/css/ever.css');
         }
     }
 
