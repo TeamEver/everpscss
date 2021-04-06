@@ -35,7 +35,7 @@ class Everpscss extends Module
     {
         $this->name = 'everpscss';
         $this->tab = 'administration';
-        $this->version = '1.2.1';
+        $this->version = '1.2.2';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->siteUrl = Tools::getHttpHost(true).__PS_BASE_URI__;
@@ -183,6 +183,13 @@ class Everpscss extends Module
                         'hint' => $this->l('Add one link per line, must be CSS'),
                         'name' => 'EVERPSCSS_LINKS',
                     ),
+                    array(
+                        'type' => 'textarea',
+                        'label' => $this->l('Custom JS links'),
+                        'desc' => $this->l('Add here your custom JS links, one per line'),
+                        'hint' => $this->l('Add one link per line, must be JS'),
+                        'name' => 'EVERPSJS_LINKS',
+                    ),
                 ),
                 'submit' => array(
                     'title' => $this->l('Save'),
@@ -222,7 +229,8 @@ class Everpscss extends Module
         return array(
             'EVERPSCSS' => $custom_css,
             'EVERPSJS' => $custom_js,
-            'EVERPSCSS_LINKS' => Configuration::get('EVERPSCSS_LINKS')
+            'EVERPSCSS_LINKS' => Configuration::get('EVERPSCSS_LINKS'),
+            'EVERPSJS_LINKS' => Configuration::get('EVERPSJS_LINKS')
         );
     }
 
@@ -277,6 +285,10 @@ class Everpscss extends Module
             'EVERPSCSS_LINKS',
             Tools::getValue('EVERPSCSS_LINKS')
         );
+        Configuration::updateValue(
+            'EVERPSJS_LINKS',
+            Tools::getValue('EVERPSJS_LINKS')
+        );
         // Là, comme on a bien enregistré, c'est ici qu'on précise un message de succès
         $this->postSuccess[] = $this->l('All settings have been saved');
     }
@@ -308,13 +320,37 @@ class Everpscss extends Module
                 $this->context->controller->addJS($this->_path.'/views/js/custom.js');
             }
         }
-        $custom_links = explode(PHP_EOL, Configuration::get('EVERPSCSS_LINKS'));
-        if ($custom_links && count($custom_links) > 0) {
-            foreach ($custom_links as $key => $css_link) {
+        $custom_css_links = explode(PHP_EOL, Configuration::get('EVERPSCSS_LINKS'));
+        if ($custom_css_links && count($custom_css_links) > 0) {
+            foreach ($custom_css_links as $key => $css_link) {
+                if (empty($css_link)) {
+                    continue;
+                }
                 if ((bool)$this->isSeven === false) {
                     $this->context->controller->addCSS($css_link);
                 } else {
-                    $this->context->controller->registerStylesheet('everpscss-'.$key, $css_link, ['media' => 'all', 'priority' => 80]);
+                    $this->context->controller->registerStylesheet(
+                        'everpscss-'.$key,
+                        $css_link,
+                        ['server' => 'remote', 'position' => 'bottom', 'priority' => 80]
+                    );
+                }
+            }
+        }
+        $custom_js_links = explode(PHP_EOL, Configuration::get('EVERPSJS_LINKS'));
+        if ($custom_js_links && count($custom_js_links) > 0) {
+            foreach ($custom_js_links as $key => $js_link) {
+                if (empty($js_link)) {
+                    continue;
+                }
+                if ((bool)$this->isSeven === false) {
+                    $this->context->controller->addJS($js_link);
+                } else {
+                    $this->context->controller->registerJavascript(
+                        'everpscss-'.$key,
+                        $js_link,
+                        ['server' => 'remote', 'position' => 'bottom', 'priority' => 80]
+                    );
                 }
             }
         }
