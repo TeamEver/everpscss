@@ -35,7 +35,7 @@ class Everpscss extends Module
     {
         $this->name = 'everpscss';
         $this->tab = 'administration';
-        $this->version = '1.2.2';
+        $this->version = '1.3.1';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->siteUrl = Tools::getHttpHost(true).__PS_BASE_URI__;
@@ -83,6 +83,10 @@ class Everpscss extends Module
                 // On enregistre avec la méthode qu'on peut trouver plus bas dans le fichier
                 $this->postProcess();
             }
+        }
+
+        if ((bool)Tools::isSubmit('submitEmptyCache') === true) {
+            $this->emptyAllCache();
         }
         // Si par contre on trouve des erreurs
         if (count($this->postErrors)) {
@@ -151,7 +155,6 @@ class Everpscss extends Module
 
     /**
      * Ici, c'est notre formulaire. Au-dessus on avait des réglages de formulaire, mais c'est bien ici qu'on construit le formulaire de configuration du module
-     * this->l('texte traduisible') ici permet d'avoir les traductions du formulaire depuis Prestashop
      */
     protected function getConfigForm()
     {
@@ -162,6 +165,26 @@ class Everpscss extends Module
                 'icon' => 'icon-smile',
                 ),
                 'input' => array(
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Empty cache on saving ?'),
+                        'desc' => $this->l('Set yes to empty cache on saving'),
+                        'hint' => $this->l('Else cache will not be emptied'),
+                        'name' => 'EVERPSCSS_CACHE',
+                        'is_bool' => true,
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Yes')
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('No')
+                            )
+                        ),
+                    ),
                     array(
                         'type' => 'textarea', // y'a plusieurs types existants : select, multiple select, text, switch, radio, etc
                         'label' => $this->l('Custom CSS'), // Le titre du champ
@@ -191,6 +214,15 @@ class Everpscss extends Module
                         'name' => 'EVERPSJS_LINKS',
                     ),
                 ),
+                'buttons' => array(
+                    'emptyCache' => array(
+                        'name' => 'submitEmptyCache',
+                        'type' => 'submit',
+                        'class' => 'btn btn-info pull-right',
+                        'icon' => 'process-icon-refresh',
+                        'title' => $this->l('Empty cache')
+                    ),
+                ),
                 'submit' => array(
                     'title' => $this->l('Save'),
                 ),
@@ -211,13 +243,8 @@ class Everpscss extends Module
                 _PS_MODULE_DIR_.'/'.$this->name.'/views/js/custom.js'
             );
         } else {
-            $theme_path = _PS_THEME_DIR_;
             $theme_name = Context::getContext()->shop->theme->getName();
-            if (_THEME_NAME_ != $theme_name)
-                $theme_path = _PS_ROOT_DIR_.'/themes/'.$theme_name.'/';
-            if (_PS_PARENT_THEME_DIR_) {
-                $theme_path = _PS_PARENT_THEME_DIR_;
-            }
+            $theme_path = _PS_ROOT_DIR_.'/themes/'.$theme_name.'/';
             $custom_css = Tools::file_get_contents(
                 $theme_path.'assets/css/custom.css'
             );
@@ -227,6 +254,7 @@ class Everpscss extends Module
         }
         // Ici on renvoie au formulaire les informations enregistrées. Cela permet à Prestashop de dire que pour le champ EVERPSCSS, l'info enregistrée est $custom_css. Pour EVERPSJS, l'info qu'on a est $custom_js
         return array(
+            'EVERPSCSS_CACHE' => Configuration::get('EVERPSCSS_CACHE'),
             'EVERPSCSS' => $custom_css,
             'EVERPSJS' => $custom_js,
             'EVERPSCSS_LINKS' => Configuration::get('EVERPSCSS_LINKS'),
@@ -271,6 +299,11 @@ class Everpscss extends Module
             'w+'
         );
         fclose($handle_js);
+
+        Configuration::updateValue(
+            'EVERPSCSS_CACHE',
+            Tools::getValue('EVERPSCSS_CACHE')
+        );
         // Là par exemplte j'enregistre dans un fichier les infos reçus du champ EVERPSCSS
         file_put_contents(
             $custom_css,
@@ -289,6 +322,9 @@ class Everpscss extends Module
             'EVERPSJS_LINKS',
             Tools::getValue('EVERPSJS_LINKS')
         );
+        if ((bool)Configuration::get('EVERPSCSS_CACHE') === true) {
+            $this->emptyAllCache();
+        }
         // Là, comme on a bien enregistré, c'est ici qu'on précise un message de succès
         $this->postSuccess[] = $this->l('All settings have been saved');
     }
@@ -356,13 +392,28 @@ class Everpscss extends Module
         }
     }
 
+    private function emptyAllCache()
+    {
+        Tools::clearAllCache();
+        $this->postSuccess[] = $this->l('Cache has been cleared');
+    }
+
     public function checkLatestEverModuleVersion($module, $version)
     {
+        $upgrade_link = 'https://upgrade.team-ever.com/upgrade.php?module='
+        .$module
+        .'&version='
+        .$version;
+        $handle = curl_init($upgrade_link);
+        curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+        curl_exec($handle);
+        $httpCode = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        curl_close($handle);
+        if ($httpCode != 200) {
+            return false;
+        }
         $module_version = Tools::file_get_contents(
-            'https://upgrade.team-ever.com/upgrade.php?module='
-            .$module
-            .'&version='
-            .$version
+            $upgrade_link
         );
         if ($module_version && $module_version > $version) {
             return true;
