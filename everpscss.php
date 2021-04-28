@@ -35,7 +35,7 @@ class Everpscss extends Module
     {
         $this->name = 'everpscss';
         $this->tab = 'administration';
-        $this->version = '1.3.1';
+        $this->version = '1.3.2';
         $this->author = 'Team Ever';
         $this->need_instance = 0;
         $this->siteUrl = Tools::getHttpHost(true).__PS_BASE_URI__;
@@ -394,7 +394,11 @@ class Everpscss extends Module
 
     private function emptyAllCache()
     {
-        Tools::clearAllCache();
+        if ((bool)$this->isSeven === true) {
+            Tools::clearAllCache();
+        } else {
+            Tools::clearCache();
+        }
         $this->postSuccess[] = $this->l('Cache has been cleared');
     }
 
